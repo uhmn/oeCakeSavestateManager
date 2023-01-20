@@ -49,7 +49,7 @@ class aboutWindow(tk.Frame):
 class copyWindowDesc(tk.Frame):
 	def __init__(self,master):
 		tk.Frame.__init__(self,master)
-		tk.Label(self, text="The \"Copy\" function is a quick and dirty way\nto move simple arrangements of particles from\n one save to another. It preserves joins in the To\nsave but is not capable of copying Elastic or Rigid safely at this time.").pack(side="top", fill="x", pady=10)
+		tk.Label(self, text="The \"Copy\" function is a quick and dirty way\nto move simple arrangements of particles from\n one save to another. It is capable of preserving\n rigid links in both saves, but cannot copy elastic\n at this time.").pack(side="top", fill="x", pady=10)
 		tk.Button(self,	text="Back",					command=lambda:	master.switch_frame(copyWindow)).pack()
 		
 class copyWindow(tk.Frame):
@@ -99,6 +99,8 @@ class copyWindow(tk.Frame):
 		scriptListB		= []
 		lineCountB		= 0
 		lineListB		= []
+		
+		rigidLines		= []
 
 		#shorthand
 		profileContent			= copyWindow.profileContent
@@ -120,6 +122,29 @@ class copyWindow(tk.Frame):
 				mainWindow.feedback.configure(text="File: To is	empty!")
 
 		newSize = lineCountB + len(particleListA)
+		
+        #Set highestRigidIndexB to the highest rigid link number in the ToFile
+		highestRigidIndexB = 0
+		parsedFileB = oeF.getParsedFile(saveFileToContent)
+		for entry in parsedFileB[1]:
+			curIndex = int(entry.index, 16)       
+			if curIndex > highestRigidIndexB:
+				highestRigidIndexB = curIndex
+                
+        #Set lowestRigidIndexA to the lowest rigid link number in the FromFile
+		lowestRigidIndexA = None
+		parsedFileA = oeF.getParsedFile(saveFileFromContent)
+		for entry in parsedFileA[1]:
+			curIndex = int(entry.index, 16)       
+			if lowestRigidIndexA == None or curIndex < lowestRigidIndexA:
+				lowestRigidIndexA = curIndex
+		
+        #Move all the rigid indexes in the FromFile to somewhere above the highest rigid index in the ToFile so they don't collide
+		for rp in parsedFileA[1]:
+			rpIndexInt = int(rp.index, 16)
+			rpIndexInt += highestRigidIndexB - lowestRigidIndexA + 1
+			rp.index = hex(rpIndexInt)[2:]
+			rigidLines.append(rp.identifier + " " + rp.material + " " + rp.index + " " + rp.layer + " " + rp.color + " " + rp.xPos + " " + rp.yPos + " " + rp.xVel + " " + rp.yVel + " " + rp.xOrg + " " + rp.yOrg + " " + rp.angle + " " + rp.angVel + " " + rp.pressure)
 
 		#stringOut = ('%s %d %s' % ('Done:',parameterListB,'lines.'))
 		#stringOut = lineCountA
@@ -136,6 +161,7 @@ class copyWindow(tk.Frame):
 			lineCountB		= 0
 			lineBufferA		= []
 			lineBufferB		= []
+			rigidCounter	= 0
 
 			charIterA	= lineListA[1]+1
 
@@ -163,6 +189,10 @@ class copyWindow(tk.Frame):
 							lineBufferA+=saveFileFromContent[charIterA]
 						else:
 							lineBufferA+=saveFileFromContent[charIterA]
+							if (lineBufferA[0] == "p"):
+								lineBufferA = []
+								lineBufferA += rigidLines[rigidCounter] + '\n'
+								rigidCounter += 1
 							toSave.write(''.join(lineBufferA))
 							lineBufferA = []
 							lineCountOut+=1

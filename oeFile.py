@@ -476,3 +476,10 @@ def combFile(fileIn):
 	
 	#output file
 	printFile()
+
+def getParsedFile(fileIn):
+	global rawContent
+	rawContent = fileIn
+	readFile()
+	global parsedTempContent
+	return parsedTempContent.copy()
